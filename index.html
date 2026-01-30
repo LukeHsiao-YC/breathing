@@ -234,7 +234,6 @@
     </div>
 
     <!-- 主卡片 -->
-    <!-- 修改: 增加 overflow-y-auto 與 max-h 確保內容過長時可以捲動 -->
     <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center border-4 border-white relative overflow-y-auto max-h-[90vh] custom-scrollbar">
         
         <!-- 設定按鈕與提示 -->
@@ -253,7 +252,6 @@
         </div>
 
         <!-- 頂部標題與裝飾 -->
-        <!-- 修改: mt-12 改為 mt-10 稍微縮減上方空間 -->
         <div class="mb-2 mt-10 relative z-10">
             <h1 class="text-3xl font-bold text-gray-800 tracking-wider mb-2">沒事，放輕鬆</h1>
             <p class="text-gray-500 text-sm px-4 leading-relaxed">練習腹式呼吸，緩解緊繃的情緒。<br>現在，想像自己站在一片開滿花的原野，<br>跟著節奏吸氣吐氣</p>
@@ -265,7 +263,6 @@
         </div>
 
         <!-- 核心動畫區 -->
-        <!-- 修改: h-64 改為 h-56 縮減動畫區高度以節省空間 -->
         <div class="h-56 flex justify-center items-center relative mb-4">
             <!-- 裝飾圈圈 (背景) -->
             <div id="ripple" class="absolute w-40 h-40 border-4 border-pink-200 rounded-full opacity-0"></div>
@@ -284,7 +281,6 @@
         </div>
 
         <!-- 指令文字與倒數 -->
-        <!-- 修改: h-28 改為 h-24 -->
         <div class="h-24 mb-2 relative z-10 flex flex-col justify-center items-center">
             <h2 id="instruction-text" class="text-2xl font-bold text-pink-500 mb-1 transition-all">準備好了嗎？</h2>
             <p id="sub-instruction" class="text-gray-500 text-sm mb-2 h-6">想像我們在一座美麗的花園裡</p>
@@ -352,7 +348,7 @@
             empty: document.getElementById('val-empty')
         };
 
-        // --- 聲音功能 ---
+        // --- 聲音功能 (模擬鋼琴) ---
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
             // 更新圖示
@@ -362,7 +358,7 @@
                 soundIcon.parentElement.classList.add('text-gray-400');
                 soundIcon.parentElement.classList.remove('text-red-400');
                 
-                // 嘗試初始化音效環境 (如果是透過點擊觸發)
+                // 嘗試初始化音效環境
                 initAudioContext();
             } else {
                 soundIcon.classList.remove('fa-volume-up');
@@ -374,7 +370,6 @@
 
         function initAudioContext() {
             if (!audioCtx) {
-                // 建立音效環境
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 audioCtx = new AudioContext();
             }
@@ -383,39 +378,43 @@
             }
         }
 
-        function playWoodenFishSound() {
+        function playPianoSound() {
             if (!isSoundEnabled) return;
-            
-            // 確保 AudioContext 已初始化
             if (!audioCtx) initAudioContext();
             if (audioCtx.state === 'suspended') audioCtx.resume();
 
             const t = audioCtx.currentTime;
             
-            // 振盪器 (Oscillator) - 產生聲音
-            const oscillator = audioCtx.createOscillator();
-            // 增益節點 (GainNode) - 控制音量
-            const gainNode = audioCtx.createGain();
+            // 鋼琴音色合成：混合多個正弦波(基頻+泛音)並使用指數衰減
+            // G4 音約 392Hz, C5 約 523Hz. 這裡選用 G4 比較溫和
+            const fundamentalFreq = 392.00; 
+
+            // 輔助函數：建立單個泛音
+            const playOscillator = (type, freq, gainVal, decay) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, t);
+                
+                // Envelope (ADSR 簡化版: Attack, Decay)
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(gainVal, t + 0.02); // Attack: 快速達到最大音量
+                gain.gain.exponentialRampToValueAtTime(0.01, t + decay); // Decay: 緩慢消失
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(t);
+                osc.stop(t + decay);
+            };
+
+            // 1. 基頻 (主音) - 正弦波
+            playOscillator('sine', fundamentalFreq, 0.6, 1.5);
             
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
+            // 2. 第二泛音 (八度音) - 正弦波，增加厚度
+            playOscillator('sine', fundamentalFreq * 2, 0.2, 1.0);
             
-            // 模擬木魚聲音設置
-            // 木魚通常是中高頻，短促，帶有共鳴
-            oscillator.type = 'sine'; // 正弦波最圓潤
-            
-            // 頻率變化：從 800Hz 快速降到 600Hz，模擬敲擊感
-            oscillator.frequency.setValueAtTime(800, t);
-            oscillator.frequency.exponentialRampToValueAtTime(600, t + 0.1);
-            
-            // 音量變化：快速響起，然後指數型衰減
-            gainNode.gain.setValueAtTime(0, t);
-            gainNode.gain.linearRampToValueAtTime(1.0, t + 0.01); // Attack
-            gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.15); // Decay
-            
-            // 播放
-            oscillator.start(t);
-            oscillator.stop(t + 0.2);
+            // 3. 第三泛音 - 三角波，增加一點點"敲擊"的清脆感
+            playOscillator('triangle', fundamentalFreq, 0.1, 0.8);
         }
 
         // --- 設定相關功能 ---
@@ -509,7 +508,7 @@
             // 1. 吸氣 (Inhale) - 聞花香
             await runPhase('inhale', CONFIG.inhale, 
                 "鼻子慢慢吸氣...", 
-                "讓肚子自然隆起，像聞一朵很香的花 🌸", // 加入肚子隆起引導
+                "讓肚子自然隆起，像聞一朵很香的花 🌸", 
                 "text-rose-500", 
                 0
             );
@@ -529,7 +528,7 @@
             // 3. 吐氣 (Exhale) - 微風吹
             await runPhase('exhale', CONFIG.exhale, 
                 "嘴巴輕輕吐氣...", 
-                "肚子逐漸平坦，像微風吹過草地 🍃", // 加入肚子平坦引導
+                "肚子逐漸平坦，像微風吹過草地 🍃", 
                 "text-emerald-500", 
                 2
             );
@@ -566,8 +565,8 @@
                 timerDisplay.textContent = timeLeft;
                 timerDisplay.className = `text-6xl font-black transition-colors duration-300 ${colorClass}`;
 
-                // 播放第一聲木魚
-                playWoodenFishSound();
+                // 播放第一聲鋼琴
+                playPianoSound();
 
                 // 更新點點
                 const dots = dotsContainer.children;
@@ -610,9 +609,9 @@
                     timeLeft--;
                     timerDisplay.textContent = timeLeft;
                     
-                    // 倒數時播放木魚聲音 (除了最後變成0的那一刻，因為馬上會接下一階段的第一聲)
+                    // 倒數時播放鋼琴聲音 (除了最後變成0的那一刻)
                     if (timeLeft > 0) {
-                        playWoodenFishSound();
+                        playPianoSound();
                     }
 
                     if (timeLeft <= 0) {
