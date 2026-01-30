@@ -14,7 +14,8 @@
             background-color: #ecfccb; /* Lime-100 自然草地色 */
             background-image: radial-gradient(#d9f99d 1px, transparent 1px);
             background-size: 20px 20px;
-            overflow: hidden; /* 防止手機上下滑動 */
+            /* 允許 body 在內容過多時捲動，防止被切掉 */
+            overflow: auto; 
         }
 
         /* 氣球動畫與樣式 */
@@ -28,8 +29,8 @@
         }
 
         .balloon {
-            width: 150px;
-            height: 150px;
+            width: 140px; /* 稍微縮小氣球以適應緊湊版面 */
+            height: 140px;
             /* 改為更自然的粉橘色/花朵色 */
             background: radial-gradient(circle at 30% 30%, #fca5a5, #ef4444); 
             border-radius: 50%;
@@ -165,9 +166,21 @@
             background: #e5e7eb;
             border-radius: 2px;
         }
+        
+        /* 自定義捲軸 */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.5);
+            border-radius: 20px;
+        }
     </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 py-8">
 
     <!-- 設定面板 (Modal) -->
     <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
@@ -221,7 +234,8 @@
     </div>
 
     <!-- 主卡片 -->
-    <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center border-4 border-white relative overflow-hidden">
+    <!-- 修改: 增加 overflow-y-auto 與 max-h 確保內容過長時可以捲動 -->
+    <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center border-4 border-white relative overflow-y-auto max-h-[90vh] custom-scrollbar">
         
         <!-- 設定按鈕與提示 -->
         <div class="absolute top-4 right-4 z-20 flex items-center">
@@ -234,18 +248,20 @@
         </div>
 
         <!-- 頂部標題與裝飾 -->
-        <div class="mb-4 mt-12 relative z-10">
+        <!-- 修改: mt-12 改為 mt-10 稍微縮減上方空間 -->
+        <div class="mb-2 mt-10 relative z-10">
             <h1 class="text-3xl font-bold text-gray-800 tracking-wider mb-2">沒事，放輕鬆</h1>
-            <p class="text-gray-500 text-sm px-4">練習腹式呼吸，緩解緊繃的情緒。<br>現在，想像自己站在一片開滿花的原野，<br>跟著節奏吸氣吐氣</p>
+            <p class="text-gray-500 text-sm px-4 leading-relaxed">練習腹式呼吸，緩解緊繃的情緒。<br>現在，想像自己站在一片開滿花的原野，<br>跟著節奏吸氣吐氣</p>
         </div>
 
         <!-- 進度指示器 (動態生成) -->
-        <div id="dots-container" class="flex justify-center gap-3 mb-6 h-4">
+        <div id="dots-container" class="flex justify-center gap-3 mb-4 mt-4 h-4">
             <!-- JS will populate this -->
         </div>
 
         <!-- 核心動畫區 -->
-        <div class="h-64 flex justify-center items-center relative mb-6">
+        <!-- 修改: h-64 改為 h-56 縮減動畫區高度以節省空間 -->
+        <div class="h-56 flex justify-center items-center relative mb-4">
             <!-- 裝飾圈圈 (背景) -->
             <div id="ripple" class="absolute w-40 h-40 border-4 border-pink-200 rounded-full opacity-0"></div>
             
@@ -263,14 +279,15 @@
         </div>
 
         <!-- 指令文字與倒數 -->
-        <div class="h-28 mb-4 relative z-10 flex flex-col justify-center items-center">
+        <!-- 修改: h-28 改為 h-24 -->
+        <div class="h-24 mb-2 relative z-10 flex flex-col justify-center items-center">
             <h2 id="instruction-text" class="text-2xl font-bold text-pink-500 mb-1 transition-all">準備好了嗎？</h2>
             <p id="sub-instruction" class="text-gray-500 text-sm mb-2 h-6">想像我們在一座美麗的花園裡</p>
             <div id="timer-display" class="text-6xl font-black text-gray-700 opacity-0 transition-opacity" style="font-variant-numeric: tabular-nums;">0</div>
         </div>
 
         <!-- 控制按鈕 -->
-        <div class="flex gap-4 justify-center relative z-10 w-full mt-2">
+        <div class="flex gap-4 justify-center relative z-10 w-full mt-2 pb-2">
             <button id="start-btn" onclick="startExercise()" class="bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-lg w-full max-w-xs flex justify-center items-center">
                 <i class="fas fa-leaf mr-2"></i> 開始深呼吸
             </button>
@@ -280,7 +297,7 @@
         </div>
 
         <!-- 完成次數 -->
-        <div class="mt-6 text-sm text-gray-400">
+        <div class="mt-4 text-sm text-gray-400">
             已完成呼吸循環: <span id="cycle-count" class="font-bold text-emerald-500 text-lg">0</span>
         </div>
     </div>
