@@ -239,7 +239,8 @@
         
         <!-- 設定按鈕與提示 -->
         <div class="absolute top-4 right-4 z-20 flex items-center">
-            <span class="text-[10px] text-gray-400 mr-2 bg-white/60 px-2 py-1 rounded-md backdrop-blur-sm shadow-sm hidden sm:block">
+            <!-- 移除 hidden sm:block，讓提示在所有裝置都顯示 -->
+            <span class="text-[10px] text-gray-400 mr-2 bg-white/60 px-2 py-1 rounded-md backdrop-blur-sm shadow-sm">
                 可以依據你的狀況調整呼吸秒數
             </span>
             <button onclick="openSettings()" class="text-gray-400 hover:text-gray-600 transition p-2">
@@ -429,7 +430,7 @@
             // 1. 吸氣 (Inhale) - 聞花香
             await runPhase('inhale', CONFIG.inhale, 
                 "鼻子慢慢吸氣...", 
-                "像聞一朵很香的花 🌸", 
+                "讓肚子自然隆起，像聞一朵很香的花 🌸", // 加入肚子隆起引導
                 "text-rose-500", 
                 0
             );
@@ -449,7 +450,7 @@
             // 3. 吐氣 (Exhale) - 微風吹
             await runPhase('exhale', CONFIG.exhale, 
                 "嘴巴輕輕吐氣...", 
-                "像微風吹過草地，輕輕的 🍃", 
+                "肚子逐漸平坦，像微風吹過草地 🍃", // 加入肚子平坦引導
                 "text-emerald-500", 
                 2
             );
