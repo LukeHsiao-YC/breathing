@@ -11,8 +11,8 @@
 
         body {
             font-family: 'Zen Maru Gothic', sans-serif;
-            background-color: #E0F2FE; /* Sky blue */
-            background-image: radial-gradient(#bae6fd 1px, transparent 1px);
+            background-color: #ecfccb; /* Lime-100 自然草地色 */
+            background-image: radial-gradient(#d9f99d 1px, transparent 1px);
             background-size: 20px 20px;
             overflow: hidden; /* 防止手機上下滑動 */
         }
@@ -25,23 +25,22 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            /* 移除 transition，由 JS 控制 */
         }
 
         .balloon {
             width: 150px;
             height: 150px;
-            background: radial-gradient(circle at 30% 30%, #FF9AA2, #FF6F91);
+            /* 改為更自然的粉橘色/花朵色 */
+            background: radial-gradient(circle at 30% 30%, #fca5a5, #ef4444); 
             border-radius: 50%;
-            box-shadow: 0 10px 25px rgba(255, 111, 145, 0.4);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
             position: relative;
-            /* 預設過渡效果，JS 會在運行時覆蓋此屬性以匹配秒數 */
             transition: transform 0.5s ease; 
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 10;
-            will-change: transform; /* 優化渲染效能 */
+            will-change: transform;
         }
 
         /* 氣球的臉部表情 */
@@ -108,6 +107,21 @@
             background-color: #333;
             border: none;
         }
+        
+        /* 再次憋氣時的表情 - 平靜 */
+        .balloon.empty-hold .eye {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background-color: #333;
+        }
+        .balloon.empty-hold .mouth {
+            width: 15px;
+            height: 2px;
+            border-radius: 0;
+            background-color: #333;
+            border: none;
+        }
 
         @keyframes blink {
             0%, 90%, 100% { transform: scaleY(1); }
@@ -129,37 +143,105 @@
             100% { transform: translateY(-100px) scale(0); opacity: 0; }
         }
 
-        /* 波紋動畫 */
-        @keyframes ripple-effect {
-            0% { transform: scale(1); opacity: 0.6; }
-            100% { transform: scale(1.5); opacity: 0; }
+        /* 自定義滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
         }
-        .animate-ripple {
-            animation: ripple-effect 1s infinite;
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #ec4899;
+            cursor: pointer;
+            margin-top: -8px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #e5e7eb;
+            border-radius: 2px;
         }
     </style>
 </head>
 <body class="h-screen flex flex-col items-center justify-center p-4">
 
+    <!-- 設定面板 (Modal) -->
+    <div id="settings-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-white rounded-3xl p-6 w-11/12 max-w-sm shadow-2xl transform transition-all scale-100">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-sliders-h mr-2 text-pink-500"></i> 調整呼吸節奏
+            </h3>
+            
+            <div class="space-y-4">
+                <!-- 吸氣 -->
+                <div>
+                    <div class="flex justify-between text-sm font-bold text-gray-600 mb-1">
+                        <span>🌸 吸氣 (Inhale)</span>
+                        <span id="val-inhale" class="text-pink-500">4秒</span>
+                    </div>
+                    <input type="range" id="input-inhale" min="4" max="6" value="4" step="1" class="w-full">
+                </div>
+
+                <!-- 憋氣 -->
+                <div>
+                    <div class="flex justify-between text-sm font-bold text-gray-600 mb-1">
+                        <span>🦋 憋氣 (Hold)</span>
+                        <span id="val-hold" class="text-pink-500">2秒</span>
+                    </div>
+                    <input type="range" id="input-hold" min="2" max="4" value="2" step="1" class="w-full">
+                </div>
+
+                <!-- 吐氣 -->
+                <div>
+                    <div class="flex justify-between text-sm font-bold text-gray-600 mb-1">
+                        <span>🍃 吐氣 (Exhale)</span>
+                        <span id="val-exhale" class="text-pink-500">7秒</span>
+                    </div>
+                    <input type="range" id="input-exhale" min="6" max="8" value="7" step="1" class="w-full">
+                </div>
+
+                <!-- 再次憋氣 -->
+                <div>
+                    <div class="flex justify-between text-sm font-bold text-gray-600 mb-1">
+                        <span>✨ 停頓 (Rest)</span>
+                        <span id="val-empty" class="text-pink-500">0秒</span>
+                    </div>
+                    <input type="range" id="input-empty" min="0" max="2" value="0" step="1" class="w-full">
+                </div>
+            </div>
+
+            <button onclick="saveSettings()" class="mt-6 w-full bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 rounded-xl transition shadow-lg">
+                確認設定
+            </button>
+        </div>
+    </div>
+
     <!-- 主卡片 -->
     <div class="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-6 md:p-8 max-w-md w-full text-center border-4 border-white relative overflow-hidden">
         
+        <!-- 設定按鈕 -->
+        <button onclick="openSettings()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition p-2 z-20">
+            <i class="fas fa-cog text-xl"></i>
+        </button>
+
         <!-- 頂部標題與裝飾 -->
-        <div class="mb-6 relative z-10">
-            <h1 class="text-3xl font-bold text-gray-800 tracking-wider mb-2">快樂呼吸小氣球</h1>
-            <p class="text-gray-500 text-sm">跟著氣球一起讓肚子變大、變小</p>
+        <div class="mb-4 relative z-10">
+            <h1 class="text-3xl font-bold text-gray-800 tracking-wider mb-2">自然呼吸小花園</h1>
+            <p class="text-gray-500 text-sm">像大自然一樣輕輕呼吸</p>
         </div>
 
-        <!-- 進度指示器 (三個階段) -->
-        <div class="flex justify-center gap-3 mb-8">
-            <div id="step-dot-1" class="w-3 h-3 rounded-full bg-gray-300 transition-all duration-300"></div>
-            <div id="step-dot-2" class="w-3 h-3 rounded-full bg-gray-300 transition-all duration-300"></div>
-            <div id="step-dot-3" class="w-3 h-3 rounded-full bg-gray-300 transition-all duration-300"></div>
+        <!-- 進度指示器 (動態生成) -->
+        <div id="dots-container" class="flex justify-center gap-3 mb-6 h-4">
+            <!-- JS will populate this -->
         </div>
 
         <!-- 核心動畫區 -->
         <div class="h-64 flex justify-center items-center relative mb-6">
-            <!-- 裝飾圈圈 (背景) - 用於吸氣時的擴散效果 -->
+            <!-- 裝飾圈圈 (背景) -->
             <div id="ripple" class="absolute w-40 h-40 border-4 border-pink-200 rounded-full opacity-0"></div>
             
             <div class="balloon-container">
@@ -178,14 +260,14 @@
         <!-- 指令文字與倒數 -->
         <div class="h-28 mb-4 relative z-10 flex flex-col justify-center items-center">
             <h2 id="instruction-text" class="text-2xl font-bold text-pink-500 mb-1 transition-all">準備好了嗎？</h2>
-            <p id="sub-instruction" class="text-gray-500 text-sm mb-2 h-5">把手放在肚子上，感覺肚子的起伏</p>
+            <p id="sub-instruction" class="text-gray-500 text-sm mb-2 h-6">想像我們在一座美麗的花園裡</p>
             <div id="timer-display" class="text-6xl font-black text-gray-700 opacity-0 transition-opacity" style="font-variant-numeric: tabular-nums;">0</div>
         </div>
 
         <!-- 控制按鈕 -->
         <div class="flex gap-4 justify-center relative z-10 w-full mt-2">
-            <button id="start-btn" onclick="startExercise()" class="bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-lg w-full max-w-xs flex justify-center items-center">
-                <i class="fas fa-play mr-2"></i> 開始練習
+            <button id="start-btn" onclick="startExercise()" class="bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95 text-lg w-full max-w-xs flex justify-center items-center">
+                <i class="fas fa-leaf mr-2"></i> 開始深呼吸
             </button>
             <button id="stop-btn" onclick="stopExercise()" class="hidden bg-gray-200 hover:bg-gray-300 text-gray-600 font-bold py-3 px-6 rounded-full shadow-md transform transition hover:scale-105 active:scale-95 w-full max-w-xs flex justify-center items-center">
                 <i class="fas fa-stop mr-2"></i> 停止
@@ -194,16 +276,17 @@
 
         <!-- 完成次數 -->
         <div class="mt-6 text-sm text-gray-400">
-            已完成呼吸次數: <span id="cycle-count" class="font-bold text-pink-500 text-lg">0</span>
+            已完成呼吸循環: <span id="cycle-count" class="font-bold text-emerald-500 text-lg">0</span>
         </div>
     </div>
 
     <script>
-        // === 呼吸節奏設定 (秒) ===
-        const CONFIG = {
-            inhale: 4,  // 吸氣
-            hold: 2,    // 憋氣
-            exhale: 7   // 吐氣 (您指定為 7 秒)
+        // === 預設呼吸節奏 ===
+        let CONFIG = {
+            inhale: 4,  
+            hold: 2,    
+            exhale: 7, 
+            empty: 0   // 吐氣後停頓
         };
 
         // 狀態變數
@@ -220,41 +303,87 @@
         const stopBtn = document.getElementById('stop-btn');
         const cycleCountDisplay = document.getElementById('cycle-count');
         const ripple = document.getElementById('ripple');
-        const dots = [
-            document.getElementById('step-dot-1'),
-            document.getElementById('step-dot-2'),
-            document.getElementById('step-dot-3')
-        ];
+        const dotsContainer = document.getElementById('dots-container');
+        
+        // Settings Elements
+        const settingsModal = document.getElementById('settings-modal');
+        const inputs = {
+            inhale: document.getElementById('input-inhale'),
+            hold: document.getElementById('input-hold'),
+            exhale: document.getElementById('input-exhale'),
+            empty: document.getElementById('input-empty')
+        };
+        const displays = {
+            inhale: document.getElementById('val-inhale'),
+            hold: document.getElementById('val-hold'),
+            exhale: document.getElementById('val-exhale'),
+            empty: document.getElementById('val-empty')
+        };
 
-        // 重置介面到初始狀態
+        // --- 設定相關功能 ---
+        function openSettings() {
+            if (isRunning) stopExercise();
+            settingsModal.classList.remove('hidden');
+        }
+
+        function saveSettings() {
+            CONFIG.inhale = parseInt(inputs.inhale.value);
+            CONFIG.hold = parseInt(inputs.hold.value);
+            CONFIG.exhale = parseInt(inputs.exhale.value);
+            CONFIG.empty = parseInt(inputs.empty.value);
+            
+            settingsModal.classList.add('hidden');
+            renderDots(); // 重新繪製點點（可能變成4顆）
+            resetUI(); // 更新介面文字
+        }
+
+        // 綁定滑桿數值顯示
+        Object.keys(inputs).forEach(key => {
+            inputs[key].addEventListener('input', (e) => {
+                displays[key].textContent = e.target.value + "秒";
+            });
+        });
+
+        // 動態生成進度點
+        function renderDots() {
+            dotsContainer.innerHTML = '';
+            // 基礎3階段 + 可選第4階段
+            const totalSteps = CONFIG.empty > 0 ? 4 : 3;
+            
+            for (let i = 0; i < totalSteps; i++) {
+                const dot = document.createElement('div');
+                dot.id = `step-dot-${i}`;
+                dot.className = "w-3 h-3 rounded-full bg-gray-300 transition-all duration-300";
+                dotsContainer.appendChild(dot);
+            }
+        }
+
+        // --- 主程式邏輯 ---
+
         function resetUI() {
             clearInterval(timerInterval);
             isRunning = false;
             
-            // 重置氣球樣式
-            balloon.style.transition = 'transform 0.5s ease-out'; // 回復預設速度
+            balloon.style.transition = 'transform 0.5s ease-out';
             balloon.style.transform = 'scale(1)';
-            balloon.classList.remove('inhale', 'hold', 'exhale');
+            balloon.classList.remove('inhale', 'hold', 'exhale', 'empty-hold');
             
-            // 重置文字
             instructionText.textContent = "準備好了嗎？";
             instructionText.className = "text-2xl font-bold text-gray-700 mb-1";
-            subInstruction.textContent = "把手放在肚子上，感覺肚子的起伏";
+            subInstruction.textContent = "想像我們在一座美麗的花園裡";
             
-            // 隱藏倒數
             timerDisplay.classList.add('opacity-0');
             timerDisplay.textContent = "0";
             
-            // 按鈕切換
             startBtn.classList.remove('hidden');
             stopBtn.classList.add('hidden');
             
-            // 重置進度點
-            dots.forEach(dot => {
+            // 重置點點顏色
+            const dots = dotsContainer.children;
+            for(let dot of dots) {
                 dot.className = "w-3 h-3 rounded-full bg-gray-300 transition-all duration-300";
-            });
+            }
             
-            // 停止波紋
             ripple.style.animation = 'none';
             ripple.style.opacity = '0';
         }
@@ -262,11 +391,9 @@
         function startExercise() {
             if (isRunning) return;
             isRunning = true;
-            
             startBtn.classList.add('hidden');
             stopBtn.classList.remove('hidden');
             timerDisplay.classList.remove('opacity-0');
-            
             runCycle();
         }
 
@@ -274,148 +401,140 @@
             resetUI();
         }
 
-        // 執行一個完整的呼吸循環
         async function runCycle() {
             if (!isRunning) return;
 
-            // 1. 吸氣 (Inhale) - 4秒
-            // 氣球變大，藍色主題
+            // 1. 吸氣 (Inhale) - 聞花香
             await runPhase('inhale', CONFIG.inhale, 
                 "鼻子慢慢吸氣...", 
-                "感覺肚子像氣球一樣變大🎈", 
-                "text-sky-500", // Tailwind 顏色
-                0 // 第一個點點
+                "像聞一朵很香的花 🌸", 
+                "text-rose-500", 
+                0
             );
             
             if (!isRunning) return;
 
-            // 2. 憋氣 (Hold) - 2秒
-            // 氣球保持大，紫色主題
+            // 2. 憋氣 (Hold) - 蝴蝶停
             await runPhase('hold', CONFIG.hold, 
                 "停住一下...", 
-                "保持氣球飽飽的", 
+                "像蝴蝶停在花瓣上一樣安靜 🦋", 
                 "text-purple-500", 
-                1 // 第二個點點
+                1
             );
             
             if (!isRunning) return;
 
-            // 3. 吐氣 (Exhale) - 7秒
-            // 氣球變小，綠色主題
+            // 3. 吐氣 (Exhale) - 微風吹
             await runPhase('exhale', CONFIG.exhale, 
-                "嘴巴慢慢吐氣...", 
-                "肚子像消氣一樣扁下去💨", 
+                "嘴巴輕輕吐氣...", 
+                "像微風吹過草地，輕輕的 🍃", 
                 "text-emerald-500", 
-                2 // 第三個點點
+                2
             );
             
             if (!isRunning) return;
 
-            // 循環完成，更新計數並放煙火
+            // 4. (選填) 再次憋氣 (Empty Hold) - 等待風起
+            if (CONFIG.empty > 0) {
+                await runPhase('empty-hold', CONFIG.empty,
+                    "靜靜等待...",
+                    "等待風再次吹起 ✨",
+                    "text-blue-400",
+                    3
+                );
+            }
+
+            if (!isRunning) return;
+
+            // 循環完成
             cycleCount++;
             cycleCountDisplay.textContent = cycleCount;
             createConfetti();
-            
-            // 立即開始下一次循環
             runCycle();
         }
 
-        // 處理單一階段的邏輯 (Promise 包裝以支援 async/await)
         function runPhase(phase, duration, mainText, subText, colorClass, dotIndex) {
             return new Promise(resolve => {
                 let timeLeft = duration;
 
-                // 1. 更新介面文字與顏色
+                // 更新文字
                 instructionText.textContent = mainText;
                 instructionText.className = `text-3xl font-bold mb-1 transition-colors duration-300 ${colorClass}`;
-                
                 subInstruction.textContent = subText;
-                
                 timerDisplay.textContent = timeLeft;
                 timerDisplay.className = `text-6xl font-black transition-colors duration-300 ${colorClass}`;
 
-                // 2. 更新進度點點 (當前階段變大且變色)
-                dots.forEach((dot, idx) => {
-                    const bgClass = colorClass.replace('text-', 'bg-'); // 將文字顏色轉為背景色
+                // 更新點點
+                const dots = dotsContainer.children;
+                for (let i = 0; i < dots.length; i++) {
+                    const bgClass = colorClass.replace('text-', 'bg-');
                     const ringClass = colorClass.replace('text-', 'ring-');
                     
-                    if (idx === dotIndex) {
-                        dot.className = `w-4 h-4 rounded-full ${bgClass} ring-2 ring-offset-2 ${ringClass} transition-all duration-300`;
+                    if (i === dotIndex) {
+                        dots[i].className = `w-4 h-4 rounded-full ${bgClass} ring-2 ring-offset-2 ${ringClass} transition-all duration-300`;
                     } else {
-                        dot.className = "w-3 h-3 rounded-full bg-gray-200 transition-all duration-300";
+                        dots[i].className = "w-3 h-3 rounded-full bg-gray-200 transition-all duration-300";
                     }
-                });
+                }
 
-                // 3. 設定氣球動畫
-                // 關鍵：將 CSS transition 時間設定為與 JS 階段時間完全一致
+                // 更新動畫
                 balloon.style.transition = `transform ${duration}s linear`;
-                
-                // 移除舊狀態，加入新狀態 Class
-                balloon.classList.remove('inhale', 'hold', 'exhale');
+                balloon.classList.remove('inhale', 'hold', 'exhale', 'empty-hold');
                 balloon.classList.add(phase);
 
-                // 根據階段設定氣球大小與特效
                 if (phase === 'inhale') {
-                    balloon.style.transform = 'scale(1.6)'; // 變大
-                    // 只有吸氣時有波紋效果
+                    balloon.style.transform = 'scale(1.6)';
                     ripple.style.animation = `ping ${duration}s cubic-bezier(0, 0, 0.2, 1) infinite`; 
                     ripple.style.opacity = '0.5';
                 } else if (phase === 'hold') {
-                    balloon.style.transform = 'scale(1.6)'; // 保持大
+                    balloon.style.transform = 'scale(1.6)';
                     ripple.style.animation = 'none';
                     ripple.style.opacity = '0';
                 } else if (phase === 'exhale') {
-                    balloon.style.transform = 'scale(1)'; // 變回原狀
+                    balloon.style.transform = 'scale(1)';
+                    ripple.style.animation = 'none';
+                    ripple.style.opacity = '0';
+                } else if (phase === 'empty-hold') {
+                    balloon.style.transform = 'scale(1)'; // 保持小
                     ripple.style.animation = 'none';
                     ripple.style.opacity = '0';
                 }
 
-                // 4. 開始倒數計時器
+                // 倒數計時
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     timerDisplay.textContent = timeLeft;
-
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
-                        resolve(); // 階段結束
+                        resolve();
                     }
-                }, 1000); // 每秒執行一次
+                }, 1000);
             });
         }
 
-        // 放煙火/紙花特效 (純 CSS/JS 實現，不需額外圖片)
         function createConfetti() {
             const container = document.body;
-            const colors = ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA'];
+            const colors = ['#fca5a5', '#bef264', '#67e8f9', '#c4b5fd', '#fcd34d'];
             
             for(let i=0; i<15; i++) {
                 const conf = document.createElement('div');
                 conf.classList.add('particle');
-                
-                // 隨機位置
-                const left = 50 + (Math.random() * 40 - 20); // 中間區域
-                
+                const left = 50 + (Math.random() * 40 - 20);
                 conf.style.left = left + '%';
                 conf.style.top = '60%';
-                
-                // 隨機大小與顏色
                 const size = (Math.random() * 8 + 6) + 'px';
                 conf.style.width = size;
                 conf.style.height = size;
                 conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                
-                // 隨機動畫參數
                 const duration = 1 + Math.random() * 1.5;
                 conf.style.animation = `floatUp ${duration}s ease-out forwards`;
-                
                 container.appendChild(conf);
-                
-                // 動畫結束後移除元素
                 setTimeout(() => conf.remove(), duration * 1000);
             }
         }
 
         // 初始化
+        renderDots();
         resetUI();
 
     </script>
