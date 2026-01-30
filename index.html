@@ -239,10 +239,14 @@
         
         <!-- 設定按鈕與提示 -->
         <div class="absolute top-4 right-4 z-20 flex items-center">
-            <!-- 移除 hidden sm:block，讓提示在所有裝置都顯示 -->
             <span class="text-[10px] text-gray-400 mr-2 bg-white/60 px-2 py-1 rounded-md backdrop-blur-sm shadow-sm">
                 可以依據你的狀況調整呼吸秒數
             </span>
+            <!-- 聲音按鈕 -->
+            <button onclick="toggleSound()" class="text-gray-400 hover:text-pink-500 transition p-2 mr-1" title="開關聲音">
+                <i id="sound-icon" class="fas fa-volume-up text-xl"></i>
+            </button>
+            <!-- 設定按鈕 -->
             <button onclick="openSettings()" class="text-gray-400 hover:text-gray-600 transition p-2">
                 <i class="fas fa-cog text-xl"></i>
             </button>
@@ -317,6 +321,10 @@
         let timerInterval = null;
         let cycleCount = 0;
         
+        // 聲音相關
+        let isSoundEnabled = true;
+        let audioCtx = null;
+
         // DOM 元素快取
         const balloon = document.getElementById('balloon');
         const instructionText = document.getElementById('instruction-text');
@@ -327,6 +335,7 @@
         const cycleCountDisplay = document.getElementById('cycle-count');
         const ripple = document.getElementById('ripple');
         const dotsContainer = document.getElementById('dots-container');
+        const soundIcon = document.getElementById('sound-icon');
         
         // Settings Elements
         const settingsModal = document.getElementById('settings-modal');
@@ -342,6 +351,72 @@
             exhale: document.getElementById('val-exhale'),
             empty: document.getElementById('val-empty')
         };
+
+        // --- 聲音功能 ---
+        function toggleSound() {
+            isSoundEnabled = !isSoundEnabled;
+            // 更新圖示
+            if (isSoundEnabled) {
+                soundIcon.classList.remove('fa-volume-mute');
+                soundIcon.classList.add('fa-volume-up');
+                soundIcon.parentElement.classList.add('text-gray-400');
+                soundIcon.parentElement.classList.remove('text-red-400');
+                
+                // 嘗試初始化音效環境 (如果是透過點擊觸發)
+                initAudioContext();
+            } else {
+                soundIcon.classList.remove('fa-volume-up');
+                soundIcon.classList.add('fa-volume-mute');
+                soundIcon.parentElement.classList.remove('text-gray-400');
+                soundIcon.parentElement.classList.add('text-red-400');
+            }
+        }
+
+        function initAudioContext() {
+            if (!audioCtx) {
+                // 建立音效環境
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playWoodenFishSound() {
+            if (!isSoundEnabled) return;
+            
+            // 確保 AudioContext 已初始化
+            if (!audioCtx) initAudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const t = audioCtx.currentTime;
+            
+            // 振盪器 (Oscillator) - 產生聲音
+            const oscillator = audioCtx.createOscillator();
+            // 增益節點 (GainNode) - 控制音量
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // 模擬木魚聲音設置
+            // 木魚通常是中高頻，短促，帶有共鳴
+            oscillator.type = 'sine'; // 正弦波最圓潤
+            
+            // 頻率變化：從 800Hz 快速降到 600Hz，模擬敲擊感
+            oscillator.frequency.setValueAtTime(800, t);
+            oscillator.frequency.exponentialRampToValueAtTime(600, t + 0.1);
+            
+            // 音量變化：快速響起，然後指數型衰減
+            gainNode.gain.setValueAtTime(0, t);
+            gainNode.gain.linearRampToValueAtTime(1.0, t + 0.01); // Attack
+            gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.15); // Decay
+            
+            // 播放
+            oscillator.start(t);
+            oscillator.stop(t + 0.2);
+        }
 
         // --- 設定相關功能 ---
         function openSettings() {
@@ -413,6 +488,10 @@
 
         function startExercise() {
             if (isRunning) return;
+            
+            // 初始化音效 (因為瀏覽器限制，必須在使用者互動時觸發)
+            initAudioContext();
+            
             isRunning = true;
             startBtn.classList.add('hidden');
             stopBtn.classList.remove('hidden');
@@ -487,6 +566,9 @@
                 timerDisplay.textContent = timeLeft;
                 timerDisplay.className = `text-6xl font-black transition-colors duration-300 ${colorClass}`;
 
+                // 播放第一聲木魚
+                playWoodenFishSound();
+
                 // 更新點點
                 const dots = dotsContainer.children;
                 for (let i = 0; i < dots.length; i++) {
@@ -527,6 +609,12 @@
                 timerInterval = setInterval(() => {
                     timeLeft--;
                     timerDisplay.textContent = timeLeft;
+                    
+                    // 倒數時播放木魚聲音 (除了最後變成0的那一刻，因為馬上會接下一階段的第一聲)
+                    if (timeLeft > 0) {
+                        playWoodenFishSound();
+                    }
+
                     if (timeLeft <= 0) {
                         clearInterval(timerInterval);
                         resolve();
